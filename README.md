@@ -1,3 +1,11 @@
+# 🚀 Accès rapide
+
+- Application (GitHub Pages) : https://jimmmouille.github.io/stencil-ar-quest/
+- Guide utilisateur : ./GUIDE_UTILISATION.md
+- Appareil cible : Meta Quest 3 uniquement (navigateur Meta Quest)
+
+---
+
 # Stencil AR pour Meta Quest 3
 
 Projetez des pochoirs (stencils) d’images PNG/JPEG sur des surfaces réelles (murs, sols, tables) en réalité mixte grâce à WebXR sur Meta Quest 3.
@@ -87,8 +95,6 @@ stencil-ar-quest/
 ## Serveur HTTPS local (dev)
 
 Si vous avez un PC/Mac et Node.js, vous pouvez tester en local en HTTPS:
-
-1. Générez un certificat auto-signé (OpenSSL requis):
 
 ```
 cd dev-server
