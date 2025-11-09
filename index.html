@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<script type="text/javascript">
+  // This is a CodeSandbox injection script that's used to
+  // add navigation and inspector functionality to the preview
+  (function () {
+    // 1) Get the <script> tag that's currently running:
+    var me = document.currentScript;
+
+    // 2) Create the blocking‐style <script> to load:
+    var script = document.createElement("script");
+    script.src = "https://codesandbox.io/p/preview-protocol.js";
+
+    // By default a dynamically‐inserted <script> is async=true.
+    // Turn async off to make it behave like a normal blocking <script>:
+    script.async = false;
+    // (Do NOT set defer.)
+
+    // 3) Insert it immediately after the current <script>:
+    me.parentNode.insertBefore(script, me);
+  })();
+
+  const isIFramePreview = window.top !== window.self;
+
+  // Only run this script in editor context
+  if (isIFramePreview) {
+    // This script is used to enable Chrome DevTools functionality
+    (function () {
+      var script = document.createElement("script");
+      script.src =
+        "https://codesandbox.io/p/chrome-devtool/protocol/index.js";
+
+      script.onload = () => {
+        const devtoolProtocol = window.chobitsu;
+        if (devtoolProtocol) {
+          window.addEventListener("message", (event) => {
+            const { type, data } = event.data;
+
+            if (type === "FROM_DEVTOOL") {
+              devtoolProtocol.sendRawMessage(data);
+            }
+          });
+
+          devtoolProtocol.setOnMessage((data) => {
+            if (data.includes('"id":"tmp')) {
+              return;
+            }
+
+            window.parent.postMessage({ type: "TO_DEVTOOL", data }, "*");
+          });
+
+          devtoolProtocol.sendRawMessage(
+            `{"id":5,"method":"Runtime.enable","params":{}}`
+          );
+        }        
+      }
+
+      (document.head || document.documentElement).prepend(script);
+    })();
+  }
+
+  if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ === "undefined") {
+    let nextID = 0;
+    let hook = (__REACT_DEVTOOLS_GLOBAL_HOOK__ = {
+      renderers: new Map(),
+      supportsFiber: true,
+      inject: (renderer) => {
+        const id = nextID++;
+        hook.renderers.set(id, renderer);
+        return id;
+      },
+      onScheduleFiberRoot() {},
+      onCommitFiberRoot() {},
+      onCommitFiberUnmount() {},
+    });
+  }
+
+  document.currentScript.remove();
+</script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Stencil AR pour Quest 3 — Accueil</title>
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body>
+  <header class="container">
+    <h1>Stencil AR pour Meta Quest 3</h1>
+    <p class="subtitle">Projetez des pochoirs d’images sur des surfaces réelles en réalité mixte.</p>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2>1) Charger une image (JPEG/PNG)</h2>
+      <p>Glissez-déposez une image ici ou utilisez le bouton de sélection. PNG avec transparence supporté.</p>
+      <div id="dropzone" class="dropzone" tabindex="0" aria-label="Zone de dépôt">
+        Déposez votre image ici
+      </div>
+      <div class="actions">
+        <input type="file" id="fileInput" accept="image/png,image/jpeg" />
+        <button id="selectBtn" class="btn">Sélectionner une image…</button>
+      </div>
+      <div id="preview" class="preview hidden">
+        <img id="previewImg" alt="Aperçu" />
+        <div class="meta">
+          <span id="imgName"></span>
+          <span id="imgSize"></span>
+          <span id="imgDims"></span>
+        </div>
+      </div>
+      <p class="hint">Astuce: L’image est stockée localement (aucun envoi). Taille optimisée automatiquement ≤ 2048 px.</p>
+    </section>
+
+    <section class="card">
+      <h2>2) Lancer l’application AR</h2>
+      <p>Sur votre Quest 3, ouvrez cette page via GitHub Pages (HTTPS). Puis démarrez l’AR:</p>
+      <ol>
+        <li>Chargez une image ci-dessus (optionnel, une image par défaut est fournie).</li>
+        <li>Cliquez sur « Ouvrir l’application ».</li>
+        <li>Dans la page suivante, appuyez sur « Entrer en VR » pour démarrer l’AR.</li>
+      </ol>
+      <a href="./app.html" class="btn primary" id="openApp">Ouvrir l’application</a>
+    </section>
+
+    <section class="card">
+      <h2>Contrôles (Quest)</h2>
+      <ul>
+        <li>Trigger: Sélection / placement</li>
+        <li>Grip: Rotation du stencil</li>
+        <li>Thumbstick: Échelle (Y) et distance (X)</li>
+        <li>Boutons X/Y: Basculer Auto / Manuel</li>
+        <li>Boutons A/B: Opacité - / +</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="container footnote">
+    <p>Projet statique — fonctionne en HTTPS. Voir README pour GitHub Pages et serveur local.</p>
+  </footer>
+
+  <script>
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    const selectBtn = document.getElementById('selectBtn');
+    const preview = document.getElementById('preview');
+    const previewImg = document.getElementById('previewImg');
+    const imgName = document.getElementById('imgName');
+    const imgSize = document.getElementById('imgSize');
+    const imgDims = document.getElementById('imgDims');
+
+    selectBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', onFiles);
+
+    ;['dragenter','dragover'].forEach(type => dropzone.addEventListener(type, e => {
+      e.preventDefault(); dropzone.classList.add('dragover');
+    }));
+    ;['dragleave','drop'].forEach(type => dropzone.addEventListener(type, e => {
+      e.preventDefault(); dropzone.classList.remove('dragover');
+    }));
+    dropzone.addEventListener('drop', e => onFiles({ target: { files: e.dataTransfer.files } }));
+
+    function onFiles(e){
+      const file = e.target.files && e.target.files[0];
+      if(!file) return;
+      if(!/image\/(png|jpeg)/.test(file.type)) { alert('Format non supporté. Utilisez PNG ou JPEG.'); return; }
+      const reader = new FileReader();
+      reader.onload = () => optimizeAndStore(reader.result, file.name);
+      reader.readAsDataURL(file);
+    }
+
+    function optimizeAndStore(dataUrl, name){
+      const img = new Image();
+      img.onload = () => {
+        const max = 2048;
+        let { width:w, height:h } = img;
+        if (w > max || h > max){
+          const scale = Math.min(max / w, max / h);
+          w = Math.round(w * scale); h = Math.round(h * scale);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0,0,w,h);
+        ctx.drawImage(img, 0, 0, w, h);
+        const optimized = dataUrl.startsWith('data:image/png') ? canvas.toDataURL('image/png') : canvas.toDataURL('image/jpeg', 0.92);
+        try {
+          localStorage.setItem('stencilImageDataUrl', optimized);
+          localStorage.setItem('stencilImageName', name || 'image');
+        } catch(err){ console.warn('Stockage local indisponible', err); }
+        showPreview(optimized, name, w, h);
+      };
+      img.src = dataUrl;
+    }
+
+    function showPreview(dataUrl, name, w, h){
+      previewImg.src = dataUrl;
+      imgName.textContent = name || 'image';
+      const bytes = Math.round((dataUrl.length * 3/4) / 1024);
+      imgSize.textContent = bytes + ' KB';
+      imgDims.textContent = `${w}×${h}`;
+      preview.classList.remove('hidden');
+    }
+
+    // Charger l’image stockée si présente
+    (function(){
+      const url = localStorage.getItem('stencilImageDataUrl');
+      const name = localStorage.getItem('stencilImageName');
+      if(url){
+        const img = new Image();
+        img.onload = () => showPreview(url, name, img.width, img.height);
+        img.src = url;
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,1 @@
+Ce dossier peut contenir des images d’exemple. L’application génère un placeholder par défaut au runtime si aucune image n’est fournie.
