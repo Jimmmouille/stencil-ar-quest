@@ -1,113 +1,464 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
-<script type="text/javascript">
-  // This is a CodeSandbox injection script that's used to
-  // add navigation and inspector functionality to the preview
-  (function () {
-    // 1) Get the <script> tag that's currently running:
-    var me = document.currentScript;
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Stencil AR - Application</title>
+    <style>
+        body { 
+            margin: 0; 
+            background-color: #000;
+            overflow: hidden;
+        }
+        
+        #container {
+            width: 100vw;
+            height: 100vh;
+        }
 
-    // 2) Create the blocking‐style <script> to load:
-    var script = document.createElement("script");
-    script.src = "https://codesandbox.io/p/preview-protocol.js";
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            text-align: center;
+            z-index: 100;
+        }
 
-    // By default a dynamically‐inserted <script> is async=true.
-    // Turn async off to make it behave like a normal blocking <script>:
-    script.async = false;
-    // (Do NOT set defer.)
-
-    // 3) Insert it immediately after the current <script>:
-    me.parentNode.insertBefore(script, me);
-  })();
-
-  const isIFramePreview = window.top !== window.self;
-
-  // Only run this script in editor context
-  if (isIFramePreview) {
-    // This script is used to enable Chrome DevTools functionality
-    (function () {
-      var script = document.createElement("script");
-      script.src =
-        "https://codesandbox.io/p/chrome-devtool/protocol/index.js";
-
-      script.onload = () => {
-        const devtoolProtocol = window.chobitsu;
-        if (devtoolProtocol) {
-          window.addEventListener("message", (event) => {
-            const { type, data } = event.data;
-
-            if (type === "FROM_DEVTOOL") {
-              devtoolProtocol.sendRawMessage(data);
-            }
-          });
-
-          devtoolProtocol.setOnMessage((data) => {
-            if (data.includes('"id":"tmp')) {
-              return;
-            }
-
-            window.parent.postMessage({ type: "TO_DEVTOOL", data }, "*");
-          });
-
-          devtoolProtocol.sendRawMessage(
-            `{"id":5,"method":"Runtime.enable","params":{}}`
-          );
-        }        
-      }
-
-      (document.head || document.documentElement).prepend(script);
-    })();
-  }
-
-  if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ === "undefined") {
-    let nextID = 0;
-    let hook = (__REACT_DEVTOOLS_GLOBAL_HOOK__ = {
-      renderers: new Map(),
-      supportsFiber: true,
-      inject: (renderer) => {
-        const id = nextID++;
-        hook.renderers.set(id, renderer);
-        return id;
-      },
-      onScheduleFiberRoot() {},
-      onCommitFiberRoot() {},
-      onCommitFiberUnmount() {},
-    });
-  }
-
-  document.currentScript.remove();
-</script>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Stencil AR — Application WebXR</title>
-  <link rel="stylesheet" href="./css/style.css" />
-  <style>
-    /* Bouton d'entrée XR visible avant session */
-    #enterXR { position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 10; }
-    #enterXR.hidden { display: none; }
-    #overlayMsg { position: fixed; left: 50%; top: calc(50% + 60px); transform: translateX(-50%); background: rgba(0,0,0,0.7); color: #fff; padding: .75rem 1rem; border-radius: 8px; z-index: 10; max-width: 90vw; }
-  </style>
+        .loading h2 {
+            margin-bottom: 1rem;
+        }
+    </style>
 </head>
 <body>
-  <button id="enterXR" class="btn primary">Entrer en VR (AR)</button>
-  <div id="overlayMsg" class="hidden">Permettre l'accès AR (caméra/senseurs) si demandé.</div>
+    <div id="loading" class="loading">
+        <h2>🎨 Stencil AR</h2>
+        <p>Chargement...</p>
+    </div>
 
-  <canvas id="xr-canvas"></canvas>
+    <div id="container"></div>
 
-  <!-- Hidden file input used when pressing "Charger Image" depuis l'UI 3D -->
-  <input type="file" id="hiddenFileInput" accept="image/png,image/jpeg" style="display:none" />
+    <!-- Import maps polyfill -->
+    <script async src="https://unpkg.com/es-module-shims@1.3.6/dist/es-module-shims.js"></script>
 
-  <!-- Three.js en global -->
-  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
-  <script src="https://unpkg.com/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.147.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.147.0/examples/jsm/",
+            "three-mesh-ui": "https://unpkg.com/three-mesh-ui@6.5.2/build/three-mesh-ui.module.js"
+        }
+    }
+    </script>
 
-  <!-- Modules applicatifs -->
-  <script src="./js/xr-setup.js"></script>
-  <script src="./js/plane-detection.js"></script>
-  <script src="./js/stencil-manager.js"></script>
-  <script src="./js/ui-3d.js"></script>
-  <script src="./js/controllers.js"></script>
-  <script src="./js/main.js"></script>
+    <!-- Vertex Shader -->
+    <script type="x-shader/x-vertex" id="vertexshader">
+    varying vec2 vUv;
+
+    void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+    </script>
+
+    <!-- Fragment Shader avec effet Sobel pour détection de contours -->
+    <script type="x-shader/x-fragment" id="fragmentshader">
+    uniform sampler2D colorTexture;
+    uniform float opacity;
+    float stepSize = 2.0;
+
+    varying vec2 vUv;
+
+    float intensity(in vec4 color) {
+        return sqrt((color.x*color.x)+(color.y*color.y)+(color.z*color.z));
+    }
+
+    void main() {
+        vec2 uv = vUv;
+        
+        ivec2 imageSize = textureSize(colorTexture, 0);
+        vec2 step = vec2(stepSize/float(imageSize.x), stepSize/float(imageSize.y));
+
+        float topLeft     = intensity(texture2D(colorTexture, uv + vec2(-step.x, step.y)));
+        float left        = intensity(texture2D(colorTexture, uv + vec2(-step.x, 0)));
+        float bottomLeft  = intensity(texture2D(colorTexture, uv + vec2(-step.x, -step.y)));
+        float top         = intensity(texture2D(colorTexture, uv + vec2(0, step.y)));
+        float bottom      = intensity(texture2D(colorTexture, uv + vec2(0, -step.y)));
+        float topRight    = intensity(texture2D(colorTexture, uv + vec2(step.x, step.y)));
+        float right       = intensity(texture2D(colorTexture, uv + vec2(step.x, 0)));
+        float bottomRight = intensity(texture2D(colorTexture, uv + vec2(step.x, -step.y)));
+     
+        float horizontal = topLeft + 2.0 * left + bottomLeft - topRight - 2.0 * right - bottomRight;
+        float vertical = -topLeft - 2.0 * top - topRight + bottomLeft + 2.0 * bottom + bottomRight;
+
+        float sobelResult = sqrt(horizontal * horizontal + vertical * vertical);
+
+        vec4 sobelColor = vec4(1.0 - sobelResult, 1.0 - sobelResult, 1.0 - sobelResult, sobelResult);
+        vec4 currentColor = texture2D(colorTexture, uv);
+
+        float smoothOpacity = smoothstep(0.0, 0.3, opacity);
+
+        gl_FragColor = vec4(
+            currentColor.x * smoothOpacity + (1.0 - smoothOpacity) * sobelColor.x,
+            currentColor.y * smoothOpacity + (1.0 - smoothOpacity) * sobelColor.y,
+            currentColor.z * smoothOpacity + (1.0 - smoothOpacity) * sobelColor.z,
+            currentColor.w * min(opacity, smoothOpacity) + (1.0 - smoothOpacity) * sobelColor.w
+        );
+    }
+    </script>
+
+    <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { ARButton } from 'three/addons/webxr/ARButton.js';
+    import ThreeMeshUI from 'three-mesh-ui';
+
+    let container;
+    let camera, scene, renderer;
+    let clock;
+    let group = null;
+    let imagePlane = null;
+    let instructionsPlane = null;
+    let currentOpacity = 0.75;
+    let currentScale = 1.0;
+    let previousDidPressHideImage = false;
+    let previousDidPressHideInstructions = false;
+
+    init();
+    animate();
+
+    function init() {
+        container = document.getElementById("container");
+        scene = new THREE.Scene();
+
+        camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 10);
+        camera.position.set(0, 0, 1);
+
+        const controls = new OrbitControls(camera, container);
+        controls.minDistance = 0;
+        controls.maxDistance = 8;
+
+        clock = new THREE.Clock();
+
+        // Renderer
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.outputEncoding = THREE.sRGBEncoding;
+        renderer.xr.enabled = true;
+        renderer.xr.setFoveation(0);
+        container.appendChild(renderer.domElement);
+
+        // Controllers
+        const controller1 = renderer.xr.getController(0);
+        scene.add(controller1);
+
+        const controller2 = renderer.xr.getController(1);
+        scene.add(controller2);
+
+        // UI Instructions
+        makeInstructionsUI();
+
+        // Load image
+        const length = 0.25;
+        group = new THREE.Group();
+        group.position.set(0, 0, -0.5);
+        scene.add(group);
+
+        // Charger depuis localStorage
+        const storedImageUrl = localStorage.getItem('stencilImageDataUrl');
+        
+        if (storedImageUrl) {
+            loadTextureFromDataUrl(group, length, storedImageUrl);
+        } else {
+            // Image par défaut
+            generatePlaceholderAndLoad(group, length);
+        }
+
+        window.addEventListener('resize', onWindowResize);
+
+        // Cacher le message de chargement
+        setTimeout(() => {
+            const loading = document.getElementById('loading');
+            if (loading) loading.style.display = 'none';
+        }, 1000);
+    }
+
+    function makeInstructionsUI() {
+        const textContainer = new ThreeMeshUI.Block({
+            borderRadius: 0.05,
+            width: 0.45,
+            height: 0.60,
+            padding: 0.05,
+            textAlign: 'left',
+            fontKerning: 'none',
+            whiteSpace: 'pre-wrap',
+            fontFamily: 'https://unpkg.com/three-mesh-ui@6.5.2/examples/assets/Roboto-msdf.json',
+            fontTexture: 'https://unpkg.com/three-mesh-ui@6.5.2/examples/assets/Roboto-msdf.png'
+        });
+
+        textContainer.rotation.y = -45.0 * (Math.PI / 180.0);
+        textContainer.position.set(0.5, 0, -0.5);
+
+        textContainer.add(
+            new ThreeMeshUI.Text({
+                content: "Instructions\n",
+                fontSize: 0.04,
+                fontColor: new THREE.Color(0x667eea)
+            }),
+
+            new ThreeMeshUI.Text({
+                content: "\nJoystick droite: ",
+                fontSize: 0.025,
+                fontColor: new THREE.Color(0xffd700)
+            }),
+            new ThreeMeshUI.Text({
+                content: "Opacité +",
+                fontSize: 0.025,
+                fontColor: new THREE.Color(0xffffff)
+            }),
+
+            new ThreeMeshUI.Text({
+                content: "\nJoystick gauche: ",
+                fontSize: 0.025,
+                fontColor: new THREE.Color(0xffd700)
+            }),
+            new ThreeMeshUI.Text({
+                content: "Opacité -",
+                fontSize: 0.025,
+                fontColor: new THREE.Color(0xffffff)
+            }),
+
+            new ThreeMeshUI.Text({
+                content: "\n\nJoystick haut: ",
+                fontSize: 0.025,
+                fontColor: new THREE.Color(0xffd700)
+            }),
+            new ThreeMeshUI.Text({
+                content: "Agrandir",
+                fontSize: 0.025,
+                fontColor: new THREE.Color(0xffffff)
+            }),
+
+            new ThreeMeshUI.Text({
+                content: "\nJoystick bas: ",
+                fontSize: 0.025,
+                fontColor: new THREE.Color(0xffd700)
+            }),
+            new ThreeMeshUI.Text({
+                content: "Réduire",
+                fontSize: 0.025,
+                fontColor: new THREE.Color(0xffffff)
+            }),
+
+            new ThreeMeshUI.Text({
+                content: "\n\nTrigger (maintenir): ",
+                fontSize: 0.025,
+                fontColor: new THREE.Color(0xffd700)
+            }),
+            new ThreeMeshUI.Text({
+                content: "Repositionner",
+                fontSize: 0.025,
+                fontColor: new THREE.Color(0xffffff)
+            }),
+
+            new ThreeMeshUI.Text({
+                content: "\n\nA ou X: ",
+                fontSize: 0.025,
+                fontColor: new THREE.Color(0xffd700)
+            }),
+            new ThreeMeshUI.Text({
+                content: "Masquer/Afficher image",
+                fontSize: 0.025,
+                fontColor: new THREE.Color(0xffffff)
+            }),
+
+            new ThreeMeshUI.Text({
+                content: "\nB ou Y: ",
+                fontSize: 0.025,
+                fontColor: new THREE.Color(0xffd700)
+            }),
+            new ThreeMeshUI.Text({
+                content: "Masquer/Afficher aide",
+                fontSize: 0.025,
+                fontColor: new THREE.Color(0xffffff)
+            })
+        );
+
+        scene.add(textContainer);
+        instructionsPlane = textContainer;
+    }
+
+    function generatePlaceholderAndLoad(container, length) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1024;
+        canvas.height = 512;
+        const ctx = canvas.getContext('2d');
+        
+        ctx.fillStyle = '#667eea';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 64px system-ui';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('Stencil AR', canvas.width / 2, canvas.height / 2 - 24);
+        
+        ctx.font = '32px system-ui';
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.fillText('Chargez une image depuis l\'accueil', canvas.width / 2, canvas.height / 2 + 32);
+        
+        const dataUrl = canvas.toDataURL('image/png');
+        loadTextureFromDataUrl(container, length, dataUrl);
+    }
+
+    function loadTextureFromDataUrl(container, length, dataUrl) {
+        const img = new Image();
+        img.onload = () => {
+            const texture = new THREE.Texture(img);
+            texture.needsUpdate = true;
+            texture.generateMipmaps = false;
+
+            document.body.appendChild(ARButton.createButton(renderer, {
+                requiredFeatures: ['local-floor'],
+                optionalFeatures: ['hand-tracking', 'depth-sensing']
+            }));
+
+            let originalWidth = img.width;
+            let originalHeight = img.height;
+
+            let max = Math.max(originalWidth, originalHeight);
+            let width = (originalWidth / max) * length;
+            let height = (originalHeight / max) * length;
+
+            const geometry = new THREE.PlaneGeometry(width, height);
+
+            const sobelMaterial = new THREE.ShaderMaterial({
+                transparent: true,
+                side: THREE.DoubleSide,
+                uniforms: {
+                    colorTexture: { value: texture },
+                    opacity: { value: currentOpacity }
+                },
+                vertexShader: document.getElementById('vertexshader').textContent,
+                fragmentShader: document.getElementById('fragmentshader').textContent
+            });
+
+            imagePlane = new THREE.Mesh(geometry, sobelMaterial);
+            container.add(imagePlane);
+        };
+        img.src = dataUrl;
+    }
+
+    function incrementOpacity(delta) {
+        currentOpacity += delta;
+        currentOpacity = Math.min(Math.max(currentOpacity, 0.0), 1.0);
+
+        if (imagePlane != null) {
+            imagePlane.material.uniforms["opacity"].value = currentOpacity;
+        }
+    }
+
+    function incrementScale(delta) {
+        currentScale += delta;
+        currentScale = Math.min(Math.max(currentScale, 0.1), 4.0);
+
+        if (group != null) {
+            group.scale.set(currentScale, currentScale, currentScale);
+        }
+    }
+
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    function animate() {
+        renderer.setAnimationLoop(loop);
+    }
+
+    function loop() {
+        updateInput();
+        ThreeMeshUI.update();
+        renderer.render(scene, camera);
+    }
+
+    function updateInput() {
+        const xrSession = renderer.xr.getSession();
+        const elapsedTime = clock.getDelta();
+
+        let didPressHideImage = false;
+        let didPressHideInstructions = false;
+
+        if (xrSession == null || xrSession.inputSources.length <= 0) {
+            return;
+        }
+
+        for (let i = 0; i < xrSession.inputSources.length; i++) {
+            const input = xrSession.inputSources[i];
+            const gamepad = input.gamepad;
+
+            if (gamepad != null && gamepad.mapping == "xr-standard" && gamepad.axes.length >= 4) {
+                const horizontal = gamepad.axes[2]; // Thumbstick X
+                const vertical = gamepad.axes[3];   // Thumbstick Y
+
+                const triggerButton = gamepad.buttons[0];
+                const axButton = gamepad.buttons[4];
+                const byButton = gamepad.buttons[5];
+
+                // Contrôle de l'échelle
+                if (vertical > 0.7) {
+                    incrementScale(-1.0 * elapsedTime);
+                } else if (vertical < -0.7) {
+                    incrementScale(1.0 * elapsedTime);
+                }
+
+                // Contrôle de l'opacité
+                if (horizontal > 0.7) {
+                    incrementOpacity(1.0 * elapsedTime);
+                } else if (horizontal < -0.7) {
+                    incrementOpacity(-1.0 * elapsedTime);
+                }
+
+                const controllerToUse = renderer.xr.getController(i);
+
+                // Repositionnement avec trigger
+                if (triggerButton.pressed) {
+                    const offsetPosition = controllerToUse.localToWorld(new THREE.Vector3(0, 0, 0.045));
+                    group.position.copy(offsetPosition);
+                    group.setRotationFromQuaternion(controllerToUse.quaternion);
+                }
+
+                // Toggle visibilité image
+                if (axButton.pressed) {
+                    didPressHideImage = true;
+                }
+
+                // Toggle visibilité instructions
+                if (byButton.pressed) {
+                    didPressHideInstructions = true;
+                }
+            }
+        }
+
+        // Gestion des toggles
+        const shouldChangeInstructionsVisibility = (!didPressHideInstructions && previousDidPressHideInstructions);
+        previousDidPressHideInstructions = didPressHideInstructions;
+
+        if (shouldChangeInstructionsVisibility && instructionsPlane) {
+            instructionsPlane.visible = !instructionsPlane.visible;
+        }
+
+        const shouldChangeImageVisibility = (!didPressHideImage && previousDidPressHideImage);
+        previousDidPressHideImage = didPressHideImage;
+
+        if (shouldChangeImageVisibility && imagePlane) {
+            imagePlane.visible = !imagePlane.visible;
+        }
+    }
+    </script>
 </body>
 </html>
