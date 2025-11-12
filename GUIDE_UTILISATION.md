@@ -1,6 +1,6 @@
-# 📘 Guide d'utilisation — Stencil AR (Meta Quest)
+# 📘 Guide d'utilisation — ARt (Meta Quest)
 
-Bienvenue ! Ce guide vous accompagne pas à pas pour utiliser **Stencil AR**, une application de projection d'images en réalité augmentée sur Meta Quest.
+Bienvenue ! Ce guide vous accompagne pas à pas pour utiliser **ARt**, une application de projection d'images en réalité augmentée sur Meta Quest.
 
 ---
 

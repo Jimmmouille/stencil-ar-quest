@@ -1,4 +1,4 @@
-# 🎨 Stencil AR - Projection d'Images en Réalité Augmentée
+# 🎨 ARt - Projection d'Images en Réalité Augmentée
 
 Application WebXR open source pour projeter des images PNG/JPEG en réalité augmentée sur **Meta Quest 2, 3 & Pro**.
 
@@ -48,7 +48,7 @@ Basée sur [Passtracing](https://github.com/fabio914/passtracing) par fabio914, 
 |----------|--------|
 | **Trigger (maintenir)** | Repositionner l'image |
 | **Joystick ⬆️ / ⬇️** | Agrandir / Réduire la taille |
-| **Joystick ⬅️ / ➡️** | Diminuer / Augmenter l'opacité |
+| **Joystick ⬅️ / ➡️** | Avancer / Reculer l'image |
 | **Bouton A ou X** | Masquer/Afficher l'image |
 | **Bouton B ou Y** | Masquer/Afficher les instructions |
 
@@ -100,7 +100,7 @@ npx http-server -p 8000 --ssl
 |----------|----------|
 | Bouton "Start AR" grisé | Vérifiez que vous êtes en **HTTPS** et sur le **navigateur Meta Quest** |
 | Image ne s'affiche pas | Rechargez l'image depuis la page d'accueil |
-| Performance faible | Utilisez des images ≤ 2048px |
+| Performance faible | Utilisez des images ≤ 4096px |
 | Pas de détection de contours | L'effet Sobel fonctionne mieux avec des images contrastées |
 
 ---
@@ -126,7 +126,7 @@ Basé sur [Passtracing](https://github.com/fabio914/passtracing) par fabio914 (M
 Les contributions sont les bienvenues ! N'hésitez pas à :
 - Ouvrir une issue pour signaler un bug
 - Proposer une pull request pour améliorer le projet
-- Partager vos créations avec Stencil AR
+- Partager vos créations avec ARt
 
 ---
 

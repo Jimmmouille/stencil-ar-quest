@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Stencil AR - Application</title>
+    <title>ARt - Application</title>
     <style>
         body { 
             margin: 0; 
@@ -34,7 +34,7 @@
 </head>
 <body>
     <div id="loading" class="loading">
-        <h2>🎨 Stencil AR</h2>
+        <h2>🎨 ARt</h2>
         <p>Chargement...</p>
     </div>
 
@@ -123,6 +123,7 @@
     let instructionsPlane = null;
     let currentOpacity = 0.75;
     let currentScale = 1.0;
+    let currentDepth = -0.5; // Position Z initiale du groupe
     let previousDidPressHideImage = false;
     let previousDidPressHideInstructions = false;
 
@@ -164,7 +165,7 @@
         // Load image
         const length = 0.25;
         group = new THREE.Group();
-        group.position.set(0, 0, -0.5);
+        group.position.set(0, 0, currentDepth);
         scene.add(group);
 
         // Charger depuis localStorage
@@ -215,7 +216,7 @@
                 fontColor: new THREE.Color(0xffd700)
             }),
             new ThreeMeshUI.Text({
-                content: "Opacité +",
+                content: "Reculer",
                 fontSize: 0.025,
                 fontColor: new THREE.Color(0xffffff)
             }),
@@ -226,7 +227,7 @@
                 fontColor: new THREE.Color(0xffd700)
             }),
             new ThreeMeshUI.Text({
-                content: "Opacité -",
+                content: "Avancer",
                 fontSize: 0.025,
                 fontColor: new THREE.Color(0xffffff)
             }),
@@ -304,7 +305,7 @@
         ctx.font = 'bold 64px system-ui';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('Stencil AR', canvas.width / 2, canvas.height / 2 - 24);
+        ctx.fillText('ARt', canvas.width / 2, canvas.height / 2 - 24);
         
         ctx.font = '32px system-ui';
         ctx.fillStyle = 'rgba(255,255,255,0.8)';
@@ -370,6 +371,14 @@
         }
     }
 
+    function incrementDepth(delta) {
+        currentDepth += delta;
+        currentDepth = Math.min(Math.max(currentDepth, -3.0), 0.5);
+        if (group != null) {
+            group.position.z = currentDepth;
+        }
+    }
+
     function onWindowResize() {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
@@ -416,11 +425,11 @@
                     incrementScale(1.0 * elapsedTime);
                 }
 
-                // Contrôle de l'opacité
+                // Contrôle de la profondeur (position Z)
                 if (horizontal > 0.7) {
-                    incrementOpacity(1.0 * elapsedTime);
+                    incrementDepth(-1.0 * elapsedTime); // Joystick droite = reculer
                 } else if (horizontal < -0.7) {
-                    incrementOpacity(-1.0 * elapsedTime);
+                    incrementDepth(1.0 * elapsedTime); // Joystick gauche = avancer
                 }
 
                 const controllerToUse = renderer.xr.getController(i);
