@@ -2,8 +2,6 @@
 
 Application WebXR open source pour projeter des images PNG/JPEG en réalité augmentée sur **Meta Quest 2, 3 & Pro**.
 
-Basée sur [Passtracing](https://github.com/fabio914/passtracing) par fabio914, adaptée et simplifiée.
-
 ---
 
 ## 🚀 Accès rapide
@@ -108,16 +106,6 @@ npx http-server -p 8000 --ssl
 ## 📄 Licence
 
 MIT License - Libre d'utilisation et de modification.
-
-Basé sur [Passtracing](https://github.com/fabio914/passtracing) par fabio914 (MIT License).
-
----
-
-## 🙏 Crédits
-
-- **fabio914** pour [Passtracing](https://github.com/fabio914/passtracing)
-- Inspiré par [Easely](https://github.com/RalphVR/easely-meta-hackathon) et [Contour](https://sidequestvr.com/app/6643/contour)
-- Communauté WebXR et Three.js
 
 ---
 

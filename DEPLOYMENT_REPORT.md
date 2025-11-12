@@ -19,7 +19,7 @@
 
 ## 🎯 Version déployée
 
-**Version 2.0** - Basée sur [Passtracing](https://github.com/fabio914/passtracing)
+**Version 2.0**
 
 ### Améliorations principales
 - ✅ **Upload local de fichiers** (plus besoin d'URL externe)
