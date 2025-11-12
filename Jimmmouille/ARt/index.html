@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Stencil AR - Projection d'Images en Réalité Augmentée</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            margin: 0; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            opacity: 0.9;
+            margin-bottom: 2rem;
+            font-size: 1rem;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .card h2 {
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .dropzone {
+            border: 2px dashed rgba(255, 255, 255, 0.5);
+            border-radius: 12px;
+            padding: 3rem 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 1rem;
+        }
+
+        .dropzone:hover, .dropzone.dragover {
+            border-color: #fff;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .btn {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            text-decoration: none;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s;
+            width: 100%;
+            text-align: center;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .btn.primary {
+            background: #fff;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .btn.primary:hover {
+            background: #f0f0f0;
+        }
+
+        .preview {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+
+        .preview img {
+            max-width: 120px;
+            max-height: 120px;
+            border-radius: 8px;
+        }
+
+        .preview .meta {
+            flex: 1;
+        }
+
+        .preview .meta div {
+            margin-bottom: 0.5rem;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        ul li {
+            padding: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        ul li:before {
+            content: "▸";
+            position: absolute;
+            left: 0;
+        }
+
+        .hint {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-top: 1rem;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem 1rem;
+            opacity: 0.8;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Stencil AR</h1>
+        <p class="subtitle">Projetez vos images en réalité augmentée sur Meta Quest 3</p>
+
+        <div class="card">
+            <h2>1️⃣ Charger une image</h2>
+            <p style="margin-bottom: 1rem;">Glissez-déposez une image PNG ou JPEG, ou cliquez pour sélectionner.</p>
+            
+            <div id="dropzone" class="dropzone" tabindex="0">
+                📁 Déposez votre image ici
+            </div>
+
+            <input type="file" id="fileInput" accept="image/png,image/jpeg,image/jpg">
+            <button id="selectBtn" class="btn">Sélectionner une image</button>
+
+            <div id="preview" class="preview hidden">
+                <img id="previewImg" alt="Aperçu">
+                <div class="meta">
+                    <div><strong id="imgName"></strong></div>
+                    <div>📏 <span id="imgDims"></span></div>
+                    <div>💾 <span id="imgSize"></span></div>
+                </div>
+            </div>
+
+            <p class="hint">💡 L'image est stockée localement et optimisée automatiquement (≤ 4096px)</p>
+        </div>
+
+        <div class="card">
+            <h2>2️⃣ Lancer l'AR</h2>
+            <p style="margin-bottom: 1rem;">Sur votre Meta Quest 3, ouvrez cette page et lancez l'application :</p>
+            <a href="./app.html" class="btn primary" id="openApp">🥽 Ouvrir l'application AR</a>
+        </div>
+
+        <div class="card">
+            <h2>🎮 Contrôles Quest</h2>
+            <ul>
+                <li><strong>Trigger (maintenir)</strong> : Repositionner l'image</li>
+                <li><strong>Joystick gauche ⬆️⬇️</strong> : Agrandir/réduire la taille</li>
+                <li><strong>Joystick gauche ⬅️➡️</strong> : Diminuer/augmenter l'opacité</li>
+                <li><strong>Joystick droit ⬆️⬇️</strong> : Avancer/reculer l'image</li>
+                <li><strong>Bouton A ou X</strong> : Masquer/afficher l'image</li>
+                <li><strong>Bouton B ou Y</strong> : Masquer/afficher les instructions</li>
+            </ul>
+        </div>
+    </div>
+
+    <footer>
+        <p>🌐 Projet WebXR open source • Fonctionne sur Meta Quest 2, 3 & Pro</p>
+    </footer>
+
+    <script>
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        const selectBtn = document.getElementById('selectBtn');
+        const preview = document.getElementById('preview');
+        const previewImg = document.getElementById('previewImg');
+        const imgName = document.getElementById('imgName');
+        const imgSize = document.getElementById('imgSize');
+        const imgDims = document.getElementById('imgDims');
+
+        selectBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', onFiles);
+
+        ['dragenter', 'dragover'].forEach(type => dropzone.addEventListener(type, e => {
+            e.preventDefault();
+            dropzone.classList.add('dragover');
+        }));
+
+        ['dragleave', 'drop'].forEach(type => dropzone.addEventListener(type, e => {
+            e.preventDefault();
+            dropzone.classList.remove('dragover');
+        }));
+
+        dropzone.addEventListener('drop', e => onFiles({ target: { files: e.dataTransfer.files } }));
+        dropzone.addEventListener('click', () => fileInput.click());
+
+        function onFiles(e) {
+            const file = e.target.files && e.target.files[0];
+            if (!file) return;
+            
+            if (!/image\/(png|jpeg|jpg)/.test(file.type)) {
+                alert('⚠️ Format non supporté. Utilisez PNG ou JPEG.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = () => optimizeAndStore(reader.result, file.name);
+            reader.readAsDataURL(file);
+        }
+
+        function optimizeAndStore(dataUrl, name) {
+            const img = new Image();
+            img.onload = () => {
+                const max = 4096;
+                let { width: w, height: h } = img;
+                
+                if (w > max || h > max) {
+                    const scale = Math.min(max / w, max / h);
+                    w = Math.round(w * scale);
+                    h = Math.round(h * scale);
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, w, h);
+                ctx.drawImage(img, 0, 0, w, h);
+
+                const optimized = dataUrl.startsWith('data:image/png') 
+                    ? canvas.toDataURL('image/png') 
+                    : canvas.toDataURL('image/jpeg', 0.92);
+
+                try {
+                    localStorage.setItem('stencilImageDataUrl', optimized);
+                    localStorage.setItem('stencilImageName', name || 'image');
+                    console.log('✅ Image sauvegardée');
+                } catch (err) {
+                    console.warn('⚠️ Impossible de sauvegarder l\'image', err);
+                }
+
+                showPreview(optimized, name, w, h);
+            };
+            img.src = dataUrl;
+        }
+
+        function showPreview(dataUrl, name, w, h) {
+            previewImg.src = dataUrl;
+            imgName.textContent = name || 'image';
+            const bytes = Math.round((dataUrl.length * 3 / 4) / 1024);
+            imgSize.textContent = bytes + ' KB';
+            imgDims.textContent = `${w}×${h} px`;
+            preview.classList.remove('hidden');
+        }
+
+        // Charger l'image stockée si présente
+        (function() {
+            const url = localStorage.getItem('stencilImageDataUrl');
+            const name = localStorage.getItem('stencilImageName');
+            if (url) {
+                const img = new Image();
+                img.onload = () => showPreview(url, name, img.width, img.height);
+                img.src = url;
+            }
+        })();
+    </script>
+</body>
+</html>
